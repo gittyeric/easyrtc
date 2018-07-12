@@ -5,6 +5,35 @@ var serveStatic = require('serve-static');  // serve static files
 var socketIo = require("socket.io");        // web socket external module
 var easyrtc = require("../");               // EasyRTC external module
 
+function getCmdArg(cmdKey, defaultVal) {
+//Object.keys(process.env).forEach(key => console.log(key));
+    //return process.env["npm_config_" + cmdKey] || defaultVal;
+return defaultVal;
+}
+
+/* To modify from command line, 
+   append a -- followed by  "--name=value" to the command, i.e.:
+   node server.js -- --port=8080
+   (npm >= 2.0.0 only)
+*/
+var options = {
+    port: getCmdArg("port", 9000),
+    privateKey:  // File path to HTTPS private key
+        getCmdArg("privateKey", false),
+    certificate: // File path to HTTPS public cert
+        getCmdArg("certificate", false)
+};
+
+var httpOptions = {};
+
+if (options.privateKey) {
+    http = require("https");
+    httpOptions = { key: options.privateKey, cert: options.certificate };
+}
+else {
+    console.warn("Warning: Starting EasyRTC Server WITHOUT HTTPS encryption. Be sure you're behind a secure proxy if on production or risk leaking client data.");
+}
+
 // Set process name
 process.title = "node-easyrtc";
 
@@ -13,7 +42,7 @@ var app = express();
 app.use(serveStatic('static', {'index': ['index.html']}));
 
 // Start Express http server on port 8080
-var webServer = http.createServer(app);
+var webServer = http.createServer(app, httpOptions);
 
 // Start Socket.io so it attaches itself to Express server
 var socketServer = socketIo.listen(webServer, {"log level":1});
@@ -53,7 +82,9 @@ var rtc = easyrtc.listen(app, socketServer, null, function(err, rtcRef) {
     });
 });
 
-//listen on port 8080
-webServer.listen(8080, function () {
-    console.log('listening on http://localhost:8080');
+//listen on port (default is 8080)
+webServer.listen(options.port, function () {
+    var protocol = (options.privateKey ? 'https' : 'http');
+    console.log(
+        'listening on ' + protocol + '://localhost:' + options.port);
 });
