@@ -22,14 +22,18 @@ function getCmdArg(cmdKey, defaultVal) {
 /* 
     To modify from command line, 
     append "--name=value" to the command, i.e.:
-    node server.js --port=8080 --httpPassword=blahblah
+    node server.js --port=8080 --httpPassword='blahblah'
 */
 var options = {
-    port: getCmdArg("port", 9000),
-    privateKey:  // File path to HTTPS private key
-        getCmdArg("privateKey", '../privkey7.pem'),
-    certificate: // File path to HTTPS public cert
-        getCmdArg("certificate", '../cert7.pem'),
+    port: getCmdArg("port", 8080),
+    // File path to HTTPS private key
+    privateKey: getCmdArg("privateKey", false),
+    // File path to HTTPS public cert
+    certificate: getCmdArg("certificate", false),
+
+    // Auth for both HTTP and socket.io access
+    // Any changes here should be changed on the client
+    // using easyrtc.setSocketUrl(url, {httpUser: 'x', httpPassword: 'p'})
     httpUser: getCmdArg("httpUser", "admin"),
     httpPassword: getCmdArg("httpPassword", "IAdmitImInsecure"),
 };
