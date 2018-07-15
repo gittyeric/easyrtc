@@ -9,17 +9,20 @@ var serveStatic = require('serve-static');  // serve static files
 var socketIo = require("socket.io");        // web socket external module
 var easyrtc = require("../");               // EasyRTC external module
 var fs = require("fs");                     // Node filesystem tools
+var parseArgs = require('minimist');        // Parse command line args
 
+var argv = parseArgs(process.argv.slice(2));
 function getCmdArg(cmdKey, defaultVal) {
-//Object.keys(process.env).forEach(key => console.log(key));
-    //return process.env["npm_config_" + cmdKey] || defaultVal;
-return defaultVal;
+    if (argv[cmdKey]) {
+        return argv[cmdKey];
+    }
+    return defaultVal;
 }
 
-/* To modify from command line, 
-   append a -- followed by  "--name=value" to the command, i.e.:
-   node server.js -- --port=8080
-   (npm >= 2.0.0 only)
+/* 
+    To modify from command line, 
+    append "--name=value" to the command, i.e.:
+    node server.js --port=8080 --httpPassword=blahblah
 */
 var options = {
     port: getCmdArg("port", 9000),
@@ -27,8 +30,8 @@ var options = {
         getCmdArg("privateKey", '../privkey7.pem'),
     certificate: // File path to HTTPS public cert
         getCmdArg("certificate", '../cert7.pem'),
-    httpUser: "admin",
-    httpPassword: "IAdmitImInsecure",
+    httpUser: getCmdArg("httpUser", "admin"),
+    httpPassword: getCmdArg("httpPassword", "IAdmitImInsecure"),
 };
 
 var createServer = function (app) {
