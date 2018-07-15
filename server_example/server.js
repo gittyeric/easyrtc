@@ -1,9 +1,14 @@
 // Load required modules
 var http    = require("http");              // http server core module
+var https   = require("https");             // https server core module
+var basicAuth = 
+    require("express-basic-auth");          // Make P2P require shared auth secret
+var socketAuth = require("socketio-auth");
 var express = require("express");           // web framework external module
 var serveStatic = require('serve-static');  // serve static files
 var socketIo = require("socket.io");        // web socket external module
 var easyrtc = require("../");               // EasyRTC external module
+var fs = require("fs");                     // Node filesystem tools
 
 function getCmdArg(cmdKey, defaultVal) {
 //Object.keys(process.env).forEach(key => console.log(key));
@@ -19,16 +24,24 @@ return defaultVal;
 var options = {
     port: getCmdArg("port", 9000),
     privateKey:  // File path to HTTPS private key
-        getCmdArg("privateKey", false),
+        getCmdArg("privateKey", '../privkey7.pem'),
     certificate: // File path to HTTPS public cert
-        getCmdArg("certificate", false)
+        getCmdArg("certificate", '../cert7.pem'),
+    httpUser: "admin",
+    httpPassword: "IAdmitImInsecure",
 };
 
-var httpOptions = {};
+var createServer = function (app) {
+    return http.createServer(app);
+}
 
 if (options.privateKey) {
-    http = require("https");
-    httpOptions = { key: options.privateKey, cert: options.certificate };
+    createServer = function (app) {
+        return https.createServer({
+            key: fs.readFileSync(options.privateKey), 
+            cert: fs.readFileSync(options.certificate)
+        }, app);
+    }
 }
 else {
     console.warn("Warning: Starting EasyRTC Server WITHOUT HTTPS encryption. Be sure you're behind a secure proxy if on production or risk leaking client data.");
@@ -41,11 +54,31 @@ process.title = "node-easyrtc";
 var app = express();
 app.use(serveStatic('static', {'index': ['index.html']}));
 
-// Start Express http server on port 8080
-var webServer = http.createServer(app, httpOptions);
+if (options.httpPassword === "IAdmitImInsecure") {
+    console.warn("Warning: Using DEFAULT PUBLICLY KNOWN credentials for Basic HTTP Authentication");
+}
+// Add Basic HTTP Authentication for minimal security
+var authUsers = {};
+authUsers[options.httpUser] = options.httpPassword;
+app.use(basicAuth({
+    users: authUsers,
+    challenge: true,
+}));
+
+// Create an htt(p/ps) server
+var webServer = createServer(app);
 
 // Start Socket.io so it attaches itself to Express server
 var socketServer = socketIo.listen(webServer, {"log level":1});
+socketAuth(socketServer, {
+    authenticate: function (socket, data, callback) {
+        if (data.username === options.httpUser && 
+            data.password === options.httpPassword) {
+            callback(null, true);
+        }
+        callback(new Error("Wrong httpUser or httpPassword"));
+    }
+});
 
 easyrtc.setOption("logLevel", "debug");
 

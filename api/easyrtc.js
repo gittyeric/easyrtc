@@ -2865,7 +2865,10 @@ var Easyrtc = function() {
     /** @private */
     var connectionOptions =  {
         'connect timeout': 10000,
-        'force new connection': true
+        'force new connection': true,
+        'secure': true,
+        'username': 'admin',
+        'password': 'IAdmitImInsecure'
     };
 
     /** @private */
@@ -8268,6 +8271,14 @@ var Easyrtc = function() {
         else if (!self.webSocket) {
             try {
                self.webSocket = io.connect(serverPath, connectionOptions);
+               if (connectionOptions.secure) {
+                   self.webSocket.on('connect', function() {
+                       self.webSocket.emit('authentication', {
+                           username: connectionOptions.username,
+                           password: connectionOptions.password
+                       });
+                   });
+               }
 
                 if (!self.webSocket) {
                     throw "io.connect failed";
